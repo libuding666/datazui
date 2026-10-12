@@ -1,0 +1,279 @@
+@import 'tailwindcss';
+@import '@appica/ui-react/styles.css';
+
+@source '../node_modules/@appica/ui-react/dist';
+
+/* ══════════════════════════════════════════════════════════════
+   打他嘴 · 主题变量
+   纸白底 + 朱砂红 + 烙金黄，中文标语感
+   ══════════════════════════════════════════════════════════════ */
+
+:root,
+.light {
+  /* 纸感中性色 */
+  --background: oklch(0.986 0.006 84);
+  --background-subtle: oklch(0.973 0.008 84);
+  --background-muted: oklch(0.949 0.011 84);
+  --background-strong: oklch(0.914 0.014 84);
+  --background-inverse: oklch(0.196 0.018 62);
+
+  --foreground: oklch(0.432 0.018 62);
+  --foreground-subtle: oklch(0.688 0.014 62);
+  --foreground-muted: oklch(0.545 0.018 62);
+  --foreground-strong: oklch(0.362 0.018 62);
+  --foreground-emphasis: oklch(0.272 0.018 62);
+  --foreground-intense: oklch(0.196 0.018 62);
+  --foreground-inverse: oklch(0.986 0.006 84);
+
+  --border: oklch(0.902 0.012 84);
+  --border-muted: oklch(0.947 0.011 84);
+  --border-strong: oklch(0.842 0.016 84);
+  --border-emphasis: oklch(0.688 0.014 62);
+  --border-intense: oklch(0.545 0.018 62);
+
+  /* 朱砂红 —— 主色 */
+  --primary: oklch(0.556 0.208 27);
+  --primary-subtle: oklch(0.556 0.208 27 / 10%);
+  --primary-soft: oklch(0.556 0.208 27 / 18%);
+  --primary-muted: oklch(0.663 0.192 27);
+  --primary-strong: oklch(0.484 0.192 27);
+  --primary-foreground: oklch(1 0 0);
+  --focus-ring-primary: oklch(0.556 0.208 27 / 30%);
+
+  /* 烙金黄 —— 副色 */
+  --secondary: oklch(0.802 0.128 84);
+  --secondary-subtle: oklch(0.72 0.15 84 / 14%);
+  --secondary-soft: oklch(0.72 0.15 84 / 24%);
+  --secondary-muted: oklch(0.882 0.088 84);
+  --secondary-strong: oklch(0.748 0.142 84);
+  --secondary-emphasis: oklch(0.703 0.152 84);
+  --secondary-intense: oklch(0.622 0.14 84);
+  --secondary-foreground: oklch(0.262 0.05 70);
+  --focus-ring-secondary: oklch(0.703 0.152 84 / 30%);
+}
+
+.dark {
+  --background: oklch(0.168 0.012 62);
+  --background-subtle: oklch(0.208 0.013 62);
+  --background-muted: oklch(0.248 0.014 62);
+  --background-strong: oklch(0.302 0.015 62);
+  --background-inverse: oklch(0.972 0.006 84);
+
+  --foreground: oklch(0.868 0.008 72);
+  --foreground-subtle: oklch(0.655 0.012 68);
+  --foreground-muted: oklch(0.742 0.01 70);
+  --foreground-strong: oklch(0.922 0.008 78);
+  --foreground-emphasis: oklch(0.952 0.006 80);
+  --foreground-intense: oklch(0.982 0.004 84);
+  --foreground-inverse: oklch(0.168 0.012 62);
+
+  --border: oklch(0.292 0.014 62);
+  --border-muted: oklch(0.246 0.013 62);
+  --border-strong: oklch(0.362 0.016 62);
+  --border-emphasis: oklch(0.655 0.012 68);
+  --border-intense: oklch(0.742 0.01 70);
+
+  --primary: oklch(0.642 0.19 27);
+  --primary-subtle: oklch(0.642 0.19 27 / 14%);
+  --primary-soft: oklch(0.642 0.19 27 / 24%);
+  --primary-muted: oklch(0.722 0.158 27);
+  --primary-strong: oklch(0.574 0.198 27);
+  --primary-foreground: oklch(1 0 0);
+  --focus-ring-primary: oklch(0.642 0.19 27 / 50%);
+
+  --secondary: oklch(0.782 0.122 84);
+  --secondary-subtle: oklch(0.72 0.15 84 / 16%);
+  --secondary-soft: oklch(0.72 0.15 84 / 26%);
+  --secondary-muted: oklch(0.842 0.09 84);
+  --secondary-strong: oklch(0.748 0.142 84);
+  --secondary-emphasis: oklch(0.703 0.152 84);
+  --secondary-intense: oklch(0.622 0.14 84);
+  --secondary-foreground: oklch(0.2 0.03 70);
+  --focus-ring-secondary: oklch(0.703 0.152 84 / 50%);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   字体 / 页面底座
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  --font-sans:
+    'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Microsoft YaHei', 'Noto Sans SC', ui-sans-serif, system-ui,
+    -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  overscroll-behavior-y: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* 安全区（刘海屏 / 手势条） */
+.dz-safe-b {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+.dz-safe-t {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+/* 横向滚动条隐藏（筛选栏） */
+.dz-noscroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.dz-noscroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   打他嘴 · 动效
+   ══════════════════════════════════════════════════════════════ */
+
+@keyframes dz-shake {
+  0% {
+    transform: translateX(0) rotate(0deg);
+  }
+  12% {
+    transform: translateX(-7px) rotate(-0.7deg);
+  }
+  26% {
+    transform: translateX(6px) rotate(0.6deg);
+  }
+  40% {
+    transform: translateX(-5px) rotate(-0.45deg);
+  }
+  56% {
+    transform: translateX(4px) rotate(0.35deg);
+  }
+  72% {
+    transform: translateX(-2.5px) rotate(-0.2deg);
+  }
+  88% {
+    transform: translateX(1.5px);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
+@keyframes dz-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.5);
+  }
+  65% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes dz-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 4px) scale(0.6) rotate(-8deg);
+  }
+  22% {
+    opacity: 1;
+    transform: translate(-50%, -8px) scale(1.22) rotate(-4deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -52px) scale(1) rotate(4deg);
+  }
+}
+
+@keyframes dz-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(2.1) rotate(-22deg);
+  }
+  60% {
+    opacity: 0.92;
+    transform: scale(0.94) rotate(-11deg);
+  }
+  100% {
+    opacity: 0.86;
+    transform: scale(1) rotate(-13deg);
+  }
+}
+
+@keyframes dz-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.9;
+  }
+}
+
+@keyframes dz-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dz-shake {
+  animation: dz-shake 460ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+.dz-pop {
+  animation: dz-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.dz-rise {
+  animation: dz-rise 820ms cubic-bezier(0.22, 0.9, 0.28, 1) forwards;
+}
+.dz-stamp {
+  animation: dz-stamp 560ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.dz-pulse {
+  animation: dz-pulse 4.5s ease-in-out infinite;
+}
+.dz-slide-up {
+  animation: dz-slide-up 420ms cubic-bezier(0.22, 0.9, 0.28, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-shake,
+  .dz-pop,
+  .dz-rise,
+  .dz-stamp,
+  .dz-pulse,
+  .dz-slide-up {
+    animation: none !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* 大字标语 */
+.dz-display {
+  letter-spacing: -0.02em;
+  font-weight: 900;
+  line-height: 1.06;
+}
+
+/* 竖排标语（桌面端装饰） */
+.dz-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.28em;
+}

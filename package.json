@@ -1,0 +1,39 @@
+{
+  "name": "datazui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vite",
+    "server": "node --watch --env-file-if-exists=.env server/index.mjs",
+    "build": "vite build",
+    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "preview": "node --env-file-if-exists=.env server/index.mjs",
+    "db:init": "node --env-file-if-exists=.env scripts/db-init.mjs",
+    "verify": "node --env-file-if-exists=.env scripts/verify.mjs",
+    "verify:api": "node --env-file-if-exists=.env scripts/verify-serverless.mjs",
+    "deploy": "npx vercel --prod"
+  },
+  "dependencies": {
+    "@appica/icons-react": "^1.1.0",
+    "@appica/ui-react": "^1.2.0",
+    "express": "^4.22.3",
+    "mysql2": "^3.24.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "playwright-core": "^1.64.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0"
+  }
+}
