@@ -95,9 +95,14 @@ const dbBefore = await getSlaps(firstId)
 await slapBtn.click()
 await slapBtn.click()
 await slapBtn.click()
-await page.waitForTimeout(1200)
+// TiDB 跨境写入有延迟，轮询等落库，不要死等固定时长
+let dbAfter = dbBefore
+for (let i = 0; i < 24; i += 1) {
+  await page.waitForTimeout(500)
+  dbAfter = await getSlaps(firstId)
+  if (dbAfter - dbBefore >= 3) break
+}
 const uiAfter = (await slapBtn.innerText()).trim()
-const dbAfter = await getSlaps(firstId)
 const delta = dbAfter - dbBefore
 check(delta === 3, `打嘴 3 次 → 库中 ${firstId} 从 ${dbBefore} 增至 ${dbAfter}`, `打嘴未落库：${dbBefore} → ${dbAfter}（期望 +3）`)
 const [[flow]] = await db.query(
