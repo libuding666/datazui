@@ -6,7 +6,6 @@ import type { Brag, BragTag } from './data/brags'
 import { compactNumber } from './lib/format'
 import { useWall } from './lib/useWall'
 import { BragCard } from './components/BragCard'
-import { StackItem } from './components/CardStack'
 import { Composer } from './components/Composer'
 import { FilterBar, type SortKey } from './components/FilterBar'
 import { Hero } from './components/Hero'
@@ -75,8 +74,7 @@ export default function App() {
             mineCount={mineCount}
           />
 
-          {/* 卡片堆叠墙：每张卡片滚动时钉住，后面的卡片像一副牌一样盖上来 */}
-          <section className="py-5" aria-label="吹牛语录墙">
+          <section className="flex flex-col gap-3 py-5" aria-label="吹牛语录墙">
             {visible.length === 0 ? (
               <EmptyState
                 onReset={() => {
@@ -86,15 +84,14 @@ export default function App() {
                 onCompose={() => setComposerOpen(true)}
               />
             ) : (
-              visible.map((brag, index) => (
-                <StackItem key={brag.id} index={index}>
-                  <BragCard
-                    brag={brag}
-                    heat={brag.slaps / maxSlaps}
-                    onSlap={slap}
-                    onDelete={remove}
-                  />
-                </StackItem>
+              visible.map((brag) => (
+                <BragCard
+                  key={brag.id}
+                  brag={brag}
+                  heat={brag.slaps / maxSlaps}
+                  onSlap={slap}
+                  onDelete={remove}
+                />
               ))
             )}
           </section>
