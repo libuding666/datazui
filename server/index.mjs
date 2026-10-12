@@ -3,7 +3,7 @@
  *
  * 启动：node server/index.mjs   （或 npm run start / npm run dev）
  *
- * 部署到 Vercel 时不会用到这个文件，Serverless 入口是 api/[...path].mjs。
+ * 部署到 Vercel 时不会用到这个文件，Serverless 入口是 api/index.mjs。
  */
 
 import http from 'node:http'

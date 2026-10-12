@@ -3,7 +3,7 @@
  *
  *   node --env-file-if-exists=.env scripts/verify-serverless.mjs
  *
- * 直接把 api/[...path].mjs 的 default 导出挂在一个原生 http server 上，
+ * 直接把 api/index.mjs 的 default 导出挂在一个原生 http server 上，
  * 等价于 Vercel 调用 Function 的方式，用来验证：
  *   - Express app 以 app(req, res) 形式能正常工作
  *   - /api 前缀被剥掉时能自动补回
@@ -15,7 +15,7 @@ import http from 'node:http'
 import { closePool } from '../server/db.mjs'
 import { config } from '../server/config.mjs'
 
-const handler = (await import('../api/[...path].mjs')).default
+const handler = (await import('../api/index.mjs')).default
 
 const server = http.createServer((req, res) => {
   // 模拟 Vercel：把 /api/xxx 原样交给 handler

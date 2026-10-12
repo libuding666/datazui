@@ -3,7 +3,7 @@
  *
  * 同一个 app 被两处复用：
  *   - server/index.mjs  本地服务（额外挂静态资源、端口顺延）
- *   - api/[...path].mjs Vercel Serverless Function
+ *   - api/index.mjs Vercel Serverless Function
  */
 
 import crypto from 'node:crypto'
