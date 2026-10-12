@@ -10,10 +10,8 @@ dist/
 # Vercel
 .vercel/
 
-# 本地验证截图与临时下载的组件文档
-.shots/
-.shots2/
-.shots-db/
+# 本地验证截图（verify 脚本产出）与临时下载的组件文档
+.shots*/
 .appica-docs/
 
 # 杂项
