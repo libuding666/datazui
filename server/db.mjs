@@ -337,6 +337,194 @@ export async function stats() {
   }
 }
 
+// ── 后台统计与管理 ──────────────────────────────────────────────────────────
+
+const ADMIN_COLUMNS = `
+  id,
+  content AS text,
+  tag,
+  scene,
+  author,
+  slaps,
+  is_seed,
+  owner_token,
+  UNIX_TIMESTAMP(created_at) * 1000 AS createdAt
+`
+
+/** 后台用：带上「是否已认领」（有 owner_token）以及是否匿名 */
+function toAdminBrag(row) {
+  return {
+    id: row.id,
+    text: row.text,
+    tag: row.tag,
+    scene: row.scene,
+    author: row.author ?? null,
+    anonymous: !row.author,
+    slaps: Number(row.slaps ?? 0),
+    createdAt: Number(row.createdAt ?? Date.now()),
+    seed: Number(row.is_seed) === 1,
+    claimed: Boolean(row.owner_token),
+  }
+}
+
+/** 概览数字：总数 / 投稿 / 今日新增 / 打嘴总量 / 今日与近 7 日打嘴 / 均量 */
+export async function adminOverview() {
+  const db = getPool()
+
+  const [[row]] = await db.query(
+    `SELECT
+       COUNT(*)                                              AS total,
+       SUM(CASE WHEN is_seed = 1 THEN 1 ELSE 0 END)          AS seeds,
+       SUM(CASE WHEN is_seed = 0 THEN 1 ELSE 0 END)          AS posts,
+       COALESCE(SUM(slaps), 0)                               AS slaps,
+       SUM(CASE WHEN created_at >= CURDATE() THEN 1 ELSE 0 END) AS postsToday
+     FROM brags`,
+  )
+  const [[today]] = await db.query(
+    'SELECT COUNT(*) AS n FROM slap_log WHERE created_at >= CURDATE()',
+  )
+  const [[week]] = await db.query(
+    `SELECT COUNT(*) AS n FROM slap_log WHERE created_at >= CURDATE() - INTERVAL 6 DAY`,
+  )
+
+  const total = Number(row.total ?? 0)
+  const slaps = Number(row.slaps ?? 0)
+
+  return {
+    total,
+    seeds: Number(row.seeds ?? 0),
+    posts: Number(row.posts ?? 0),
+    postsToday: Number(row.postsToday ?? 0),
+    slaps,
+    slapsToday: Number(today.n ?? 0),
+    slapsWeek: Number(week.n ?? 0),
+    slapsAvg: total ? Math.round((slaps / total) * 10) / 10 : 0,
+  }
+}
+
+/** 归类分布 */
+export async function adminTagBreakdown() {
+  const db = getPool()
+  const [rows] = await db.query(
+    `SELECT tag, COUNT(*) AS count, COALESCE(SUM(slaps), 0) AS slaps
+       FROM brags
+      GROUP BY tag
+      ORDER BY count DESC, tag ASC`,
+  )
+  return rows.map((row) => ({
+    tag: row.tag,
+    count: Number(row.count),
+    slaps: Number(row.slaps),
+  }))
+}
+
+/** 场合分布 Top N */
+export async function adminSceneBreakdown(limit = 8) {
+  const db = getPool()
+  const n = Math.min(Math.max(Number(limit) || 8, 3), 20)
+  const [rows] = await db.query(
+    `SELECT scene, COUNT(*) AS count
+       FROM brags
+      GROUP BY scene
+      ORDER BY count DESC, scene ASC
+      LIMIT ${n}`,
+  )
+  return rows.map((row) => ({ scene: row.scene, count: Number(row.count) }))
+}
+
+/** 最近 N 天打嘴趋势（缺口补 0） */
+export async function adminTrend(days = 14) {
+  const db = getPool()
+  const n = Math.min(Math.max(Number(days) || 14, 7), 60)
+
+  const [rows] = await db.query(
+    `SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day, COUNT(*) AS count
+       FROM slap_log
+      WHERE created_at >= CURDATE() - INTERVAL ${n - 1} DAY
+      GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')`,
+  )
+  const map = new Map(rows.map((row) => [String(row.day), Number(row.count)]))
+
+  const out = []
+  const now = new Date()
+  for (let i = n - 1; i >= 0; i -= 1) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate(),
+    ).padStart(2, '0')}`
+    out.push({
+      day: key,
+      label: `${d.getMonth() + 1}/${d.getDate()}`,
+      count: map.get(key) ?? 0,
+    })
+  }
+  return out
+}
+
+/** 最热语录 Top N */
+export async function adminTopBrags(limit = 5) {
+  const db = getPool()
+  const n = Math.min(Math.max(Number(limit) || 5, 3), 20)
+  const [rows] = await db.query(
+    `SELECT ${ADMIN_COLUMNS} FROM brags ORDER BY slaps DESC, created_at DESC LIMIT ${n}`,
+  )
+  return rows.map(toAdminBrag)
+}
+
+/** 最新用户投稿 */
+export async function adminRecentPosts(limit = 8) {
+  const db = getPool()
+  const n = Math.min(Math.max(Number(limit) || 8, 3), 30)
+  const [rows] = await db.query(
+    `SELECT ${ADMIN_COLUMNS} FROM brags WHERE is_seed = 0 ORDER BY created_at DESC LIMIT ${n}`,
+  )
+  return rows.map(toAdminBrag)
+}
+
+/** 语录列表：关键词 / 归类 / 来源筛选 + 分页 */
+export async function adminListBrags({ q = '', tag = '', kind = '', page = 1, pageSize = 12 } = {}) {
+  const db = getPool()
+
+  const where = []
+  const params = []
+  if (typeof q === 'string' && q.trim()) {
+    where.push('content LIKE ?')
+    params.push(`%${q.trim()}%`)
+  }
+  if (typeof tag === 'string' && tag.trim()) {
+    where.push('tag = ?')
+    params.push(tag.trim())
+  }
+  if (kind === 'seed') where.push('is_seed = 1')
+  if (kind === 'user') where.push('is_seed = 0')
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : ''
+
+  const size = Math.min(Math.max(Number(pageSize) || 12, 5), 50)
+  const [[countRow]] = await db.query(`SELECT COUNT(*) AS n FROM brags ${clause}`, params)
+  const total = Number(countRow?.n ?? 0)
+  const pages = Math.max(1, Math.ceil(total / size))
+  const current = Math.min(Math.max(Number(page) || 1, 1), pages)
+  const offset = (current - 1) * size
+
+  const [rows] = await db.query(
+    `SELECT ${ADMIN_COLUMNS} FROM brags ${clause}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${size} OFFSET ${offset}`,
+    params,
+  )
+
+  return { items: rows.map(toAdminBrag), total, page: current, pageSize: size, pages }
+}
+
+/** 后台删除：内置语录也允许删 */
+export async function adminDeleteBrag(id) {
+  const db = getPool()
+  const [result] = await db.query('DELETE FROM brags WHERE id = ?', [id])
+  if (result.affectedRows === 0) return { ok: false, reason: 'not_found' }
+  await db.query('DELETE FROM slap_log WHERE brag_id = ?', [id])
+  return { ok: true }
+}
+
 export async function closePool() {
   if (pool) {
     await pool.end()

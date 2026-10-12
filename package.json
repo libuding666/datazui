@@ -16,6 +16,7 @@
     "db:init": "node --env-file-if-exists=.env scripts/db-init.mjs",
     "verify": "node --env-file-if-exists=.env scripts/verify.mjs",
     "verify:api": "node --env-file-if-exists=.env scripts/verify-serverless.mjs",
+    "verify:admin": "node --env-file-if-exists=.env scripts/verify-admin.mjs",
     "deploy": "npx vercel --prod"
   },
   "dependencies": {

@@ -13,7 +13,22 @@ import path from 'node:path'
 import express from 'express'
 
 import { config, connSummary } from './config.mjs'
-import { listBrags, insertBrag, slapBrag, deleteBrag, stats, ping } from './db.mjs'
+import {
+  listBrags,
+  insertBrag,
+  slapBrag,
+  deleteBrag,
+  stats,
+  ping,
+  adminOverview,
+  adminTagBreakdown,
+  adminSceneBreakdown,
+  adminTrend,
+  adminTopBrags,
+  adminRecentPosts,
+  adminListBrags,
+  adminDeleteBrag,
+} from './db.mjs'
 
 const BRAG_TAGS = new Set(['遥遥领先', '全球第一', '完全自研', '没有对手', '重新定义', '友商不行'])
 const DEFAULT_SCENE = '其他'
@@ -35,6 +50,29 @@ function newId() {
 
 function wrap(handler) {
   return (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next)
+}
+
+/** 口令用等长比较，避免时序侧信道 */
+function tokenMatches(input, expected) {
+  if (typeof input !== 'string' || !expected) return false
+  const a = Buffer.from(input)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length) return false
+  return crypto.timingSafeEqual(a, b)
+}
+
+/** 后台接口守卫：未配置口令直接关闭后台 */
+function requireAdmin(req, res, next) {
+  if (!config.adminToken) {
+    return res.status(503).json({
+      error: 'ADMIN_DISABLED',
+      message: '后台未启用：请在环境变量中设置 DZ_ADMIN_TOKEN',
+    })
+  }
+  if (!tokenMatches(req.get('x-dz-admin'), config.adminToken)) {
+    return res.status(401).json({ error: 'UNAUTHORIZED', message: '管理口令不对' })
+  }
+  next()
 }
 
 // ── 应用 ────────────────────────────────────────────────────────────────────
@@ -134,14 +172,75 @@ export function createApp({ staticDir } = {}) {
         seed_readonly: [403, 'SEED_READONLY', '内置语录不能删'],
         forbidden: [403, 'FORBIDDEN', '只能删自己发的'],
       }
-      const [status, error, message] = map[result.reason] ?? [400, 'BAD_REQUEST', '删不掉']
-      res.status(status).json({ error, message })
-    }),
-  )
+    const [status, error, message] = map[result.reason] ?? [400, 'BAD_REQUEST', '删不掉']
+    res.status(status).json({ error, message })
+  }),
+)
+
+// ── 后台管理（需要 x-dz-admin 口令）──────────────────────────────────────────
+
+/** 校验口令是否仍然有效，前端用来判断登录态 */
+app.get('/api/admin/session', requireAdmin, (_req, res) => {
+  res.json({ ok: true })
+})
+
+/** 一次性返回后台首页所有统计，省掉多次往返 */
+app.get(
+  '/api/admin/stats',
+  requireAdmin,
+  wrap(async (_req, res) => {
+    const [overview, byTag, byScene, trend, top, recent] = await Promise.all([
+      adminOverview(),
+      adminTagBreakdown(),
+      adminSceneBreakdown(8),
+      adminTrend(14),
+      adminTopBrags(5),
+      adminRecentPosts(6),
+    ])
+    res.json({ overview, byTag, byScene, trend, top, recent })
+  }),
+)
+
+app.get(
+  '/api/admin/brags',
+  requireAdmin,
+  wrap(async (req, res) => {
+    const { q, tag, kind, page, pageSize } = req.query
+    res.json(
+      await adminListBrags({
+        q: typeof q === 'string' ? q : '',
+        tag: typeof tag === 'string' ? tag : '',
+        kind: typeof kind === 'string' ? kind : '',
+        page: Number(page) || 1,
+        pageSize: Number(pageSize) || 12,
+      }),
+    )
+  }),
+)
+
+app.delete(
+  '/api/admin/brags/:id',
+  requireAdmin,
+  wrap(async (req, res) => {
+    const result = await adminDeleteBrag(req.params.id)
+    if (!result.ok) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: '这条语录已经不在了' })
+    }
+    res.json({ ok: true })
+  }),
+)
 
   // 本地开发才需要自己托管前端；Vercel 由平台直接发 dist
   if (staticDir && fs.existsSync(staticDir)) {
     app.use(express.static(staticDir, { index: false, maxAge: '1h' }))
+
+    // 后台入口：/admin 与 /admin/ 都指向 admin.html
+    app.get(['/admin', '/admin/'], (_req, res) => {
+      const file = path.join(staticDir, 'admin.html')
+      if (fs.existsSync(file)) return res.sendFile(file)
+      res.redirect('/')
+    })
+
     app.get(/^(?!\/api\/).*/, (_req, res) => {
       res.sendFile(path.join(staticDir, 'index.html'))
     })

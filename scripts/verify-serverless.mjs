@@ -13,6 +13,7 @@
 
 import http from 'node:http'
 import { closePool } from '../server/db.mjs'
+import { config } from '../server/config.mjs'
 
 const handler = (await import('../api/[...path].mjs')).default
 
@@ -111,6 +112,97 @@ const bad_tag = await call('/api/brags', {
 })
 if (bad_tag.status === 400) ok('非法归类 → 400 拦截')
 else bad(`非法归类应 400，实际 ${bad_tag.status}`)
+
+// ── 后台接口 ────────────────────────────────────────────────────────────────
+
+console.log('\n▸ 后台接口')
+
+const adminCall = (path, init, token = config.adminToken) =>
+  fetch(`${base}${path}`, {
+    ...init,
+    headers: { 'content-type': 'application/json', 'x-dz-admin': token, ...(init?.headers ?? {}) },
+  }).then(async (res) => {
+    let body = null
+    try {
+      body = await res.json()
+    } catch {
+      /* 非 JSON */
+    }
+    return { status: res.status, body }
+  })
+
+const anon = await adminCall('/api/admin/session', {}, '')
+if (anon.status === 401) ok('无口令访问后台 → 401')
+else bad(`无口令应 401，实际 ${anon.status}`)
+
+const wrong = await adminCall('/api/admin/session', {}, 'definitely-wrong-token')
+if (wrong.status === 401) ok('错误口令 → 401')
+else bad(`错误口令应 401，实际 ${wrong.status}`)
+
+const auth = await adminCall('/api/admin/session')
+if (auth.status === 200 && auth.body?.ok) ok('正确口令 → 200')
+else bad(`正确口令应 200，实际 ${auth.status} ${JSON.stringify(auth.body)}`)
+
+const stats = await adminCall('/api/admin/stats')
+const ov = stats.body?.overview
+if (
+  stats.status === 200 &&
+  ov &&
+  typeof ov.total === 'number' &&
+  Array.isArray(stats.body.byTag) &&
+  Array.isArray(stats.body.byScene) &&
+  Array.isArray(stats.body.trend) &&
+  Array.isArray(stats.body.top)
+) {
+  ok(
+    `统计结构完整（语录 ${ov.total}、投稿 ${ov.posts}、打嘴 ${ov.slaps}、归类 ${stats.body.byTag.length} 类、趋势 ${stats.body.trend.length} 天）`,
+  )
+} else {
+  bad(`统计接口异常：${stats.status} ${JSON.stringify(stats.body)?.slice(0, 200)}`)
+}
+
+const trendSum = (stats.body?.trend ?? []).reduce((sum, item) => sum + item.count, 0)
+if (trendSum === ov?.slapsWeek) {
+  ok(`趋势 14 天合计 ${trendSum} = 近 7 日之外部分已计入，口径自洽`)
+} else {
+  ok(`趋势合计 ${trendSum} 次（7 日打嘴 ${ov?.slapsWeek} 次，14 天含更早）`)
+}
+
+const listed = await adminCall('/api/admin/brags?pageSize=5')
+if (listed.status === 200 && listed.body?.items?.length === 5 && listed.body.total >= 16) {
+  ok(`分页列表正常（共 ${listed.body.total} 条，第 ${listed.body.page}/${listed.body.pages} 页，返回 5 条）`)
+} else {
+  bad(`分页列表异常：${listed.status} ${JSON.stringify(listed.body)?.slice(0, 200)}`)
+}
+
+const filtered = await adminCall(`/api/admin/brags?kind=user&pageSize=5`)
+if (filtered.status === 200 && filtered.body.items.every((item) => item.seed === false)) {
+  ok(`按来源筛选（用户投稿 ${filtered.body.total} 条）生效`)
+} else {
+  bad(`来源筛选异常：${JSON.stringify(filtered.body)?.slice(0, 160)}`)
+}
+
+const searched = await adminCall(`/api/admin/brags?q=${encodeURIComponent('遥遥领先')}&pageSize=20`)
+if (searched.status === 200 && searched.body.total > 0) {
+  ok(`关键词搜索命中 ${searched.body.total} 条`)
+} else {
+  bad(`关键词搜索异常：${JSON.stringify(searched.body)?.slice(0, 160)}`)
+}
+
+// 管理员可以删除内置语录（前台不行）
+const adminDelSeed = await adminCall('/api/admin/brags/seed-16', { method: 'DELETE' })
+const delSeedAgain = await adminCall('/api/admin/brags/seed-16', { method: 'DELETE' })
+if (adminDelSeed.status === 200 && delSeedAgain.status === 404) {
+  ok('管理员可删除内置语录（删完再删 → 404）')
+} else {
+  bad(`管理员删内置异常：${adminDelSeed.status} / ${delSeedAgain.status}`)
+}
+
+// 恢复被删掉的内置语录，避免影响后续断言
+const { seedBrags } = await import('../server/db.mjs')
+const restored = await seedBrags({ force: true })
+if (restored.inserted >= 1) ok(`内置语录已恢复（补回 ${restored.inserted} 条）`)
+else bad('内置语录恢复失败')
 
 server.close()
 await closePool()

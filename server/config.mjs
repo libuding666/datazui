@@ -65,6 +65,12 @@ export const config = {
   /** 单条语录长度上限（与前端 MAX_LEN 对齐，留点余量） */
   maxContentLength: 200,
   maxAuthorLength: 32,
+
+  /**
+   * 后台管理口令。为空时后台接口整体关闭（安全默认）。
+   * 本地写进 .env，线上在 Vercel 环境变量里配一个强口令。
+   */
+  adminToken: process.env.DZ_ADMIN_TOKEN ?? '',
 }
 
 /** 打日志用，绝不包含密码 */
